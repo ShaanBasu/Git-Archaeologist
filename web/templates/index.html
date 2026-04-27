@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Archaeologist</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="scanline"></div>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo-mark">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="9" stroke="var(--accent)" stroke-width="1.5"/>
+          <circle cx="11" cy="11" r="4" fill="var(--accent)" opacity="0.3"/>
+          <circle cx="11" cy="11" r="1.5" fill="var(--accent)"/>
+          <line x1="11" y1="2" x2="11" y2="6" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="11" y1="16" x2="11" y2="20" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="2" y1="11" x2="6" y2="11" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="16" y1="11" x2="20" y2="11" stroke="var(--accent)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">GIT<span class="logo-accent">ARCHAEOLOGIST</span></span>
+      <span class="version-tag">v1.0</span>
+    </div>
+    <div class="topbar-stats" id="topbar-stats">
+      <div class="stat-chip" id="stat-commits"><span class="stat-label">COMMITS</span><span class="stat-val">—</span></div>
+      <div class="stat-chip" id="stat-authors"><span class="stat-label">AUTHORS</span><span class="stat-val">—</span></div>
+      <div class="stat-chip" id="stat-files"><span class="stat-label">FILES</span><span class="stat-val">—</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">IDLE</span>
+    </div>
+  </header>
+
+  <!-- REPO INPUT BAR -->
+  <div class="input-bar">
+    <div class="input-prefix">REPO_PATH</div>
+    <input
+      type="text"
+      id="repo-input"
+      class="repo-input"
+      placeholder="C:\Users\you\projects\my-repo"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button class="scan-btn" id="scan-btn" onclick="loadRepo()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      SCAN
+    </button>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div class="workspace" id="workspace">
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state" id="empty-state">
+      <div class="empty-grid"></div>
+      <div class="empty-content">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" class="empty-icon">
+          <rect x="8" y="8" width="32" height="32" rx="2" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <circle cx="24" cy="24" r="6" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="24" y1="8" x2="24" y2="18" stroke="var(--accent)" stroke-width="1" opacity="0.5"/>
+          <line x1="24" y1="30" x2="24" y2="40" stroke="var(--accent)" stroke-width="1" opacity="0.5"/>
+          <line x1="8" y1="24" x2="18" y2="24" stroke="var(--accent)" stroke-width="1" opacity="0.5"/>
+          <line x1="30" y1="24" x2="40" y2="24" stroke="var(--accent)" stroke-width="1" opacity="0.5"/>
+        </svg>
+        <p class="empty-title">No repository loaded</p>
+        <p class="empty-sub">Enter a local git repository path above and press SCAN</p>
+      </div>
+    </div>
+
+    <!-- PANELS (hidden until repo loaded) -->
+    <div class="panels" id="panels" style="display:none">
+
+      <!-- LEFT: FILE TREE + HOTSPOTS -->
+      <aside class="left-panel">
+        <div class="panel-header">
+          <span class="panel-title">HOTSPOT INDEX</span>
+          <div class="panel-tabs">
+            <button class="tab-btn active" id="tab-hotspots" onclick="switchTab('hotspots')">CHURN</button>
+            <button class="tab-btn" id="tab-files" onclick="switchTab('files')">ALL FILES</button>
+          </div>
+        </div>
+
+        <!-- HOTSPOTS TAB -->
+        <div id="hotspot-list" class="file-list"></div>
+
+        <!-- ALL FILES TAB -->
+        <div id="file-list" class="file-list" style="display:none">
+          <div class="search-wrap">
+            <input type="text" id="file-search" class="file-search" placeholder="filter files..." oninput="filterFiles()" />
+          </div>
+          <div id="file-list-inner"></div>
+        </div>
+      </aside>
+
+      <!-- RIGHT: DETAIL PANEL -->
+      <main class="right-panel" id="right-panel">
+        <div class="detail-empty" id="detail-empty">
+          <p>SELECT A FILE TO ANALYSE</p>
+        </div>
+
+        <div class="detail-content" id="detail-content" style="display:none">
+
+          <!-- FILE HEADER -->
+          <div class="detail-header">
+            <div class="detail-path" id="detail-path"></div>
+            <div class="detail-meta" id="detail-meta"></div>
+          </div>
+
+          <!-- AI EXPLANATION -->
+          <div class="section">
+            <div class="section-label">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="5" stroke="var(--accent)" stroke-width="1"/>
+                <circle cx="6" cy="6" r="2" fill="var(--accent)" opacity="0.6"/>
+              </svg>
+              AI ANALYSIS
+            </div>
+            <div class="explanation-box" id="explanation-box">
+              <div class="loading-bar" id="loading-bar">
+                <div class="loading-fill"></div>
+                <span class="loading-text">QUERYING OLLAMA...</span>
+              </div>
+              <p class="explanation-text" id="explanation-text" style="display:none"></p>
+            </div>
+          </div>
+
+          <!-- COMMIT TIMELINE -->
+          <div class="section">
+            <div class="section-label">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <polyline points="1,9 4,4 7,7 10,2" stroke="var(--accent)" stroke-width="1" fill="none"/>
+              </svg>
+              COMMIT FREQUENCY
+            </div>
+            <div class="chart-wrap">
+              <canvas id="commit-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- COMMIT LOG -->
+          <div class="section">
+            <div class="section-label">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <rect x="1" y="2" width="10" height="1.5" fill="var(--accent)" opacity="0.8"/>
+                <rect x="1" y="5.25" width="7" height="1.5" fill="var(--accent)" opacity="0.5"/>
+                <rect x="1" y="8.5" width="8.5" height="1.5" fill="var(--accent)" opacity="0.3"/>
+              </svg>
+              COMMIT LOG
+            </div>
+            <div class="commit-log" id="commit-log"></div>
+          </div>
+
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- TOP AUTHORS FOOTER -->
+  <footer class="bottom-bar" id="bottom-bar" style="display:none">
+    <span class="footer-label">TOP CONTRIBUTORS</span>
+    <div class="authors-list" id="authors-list"></div>
+  </footer>
+
+<script>
+  let currentRepoPath = "";
+  let allFiles = [];
+  let commitChart = null;
+
+  // ── status helper ──────────────────────────────────────────────────────────
+  function setStatus(state, text) {
+    const dot = document.getElementById("status-dot");
+    const label = document.getElementById("status-text");
+    dot.className = "status-dot " + state;
+    label.textContent = text;
+  }
+
+  // ── load repo ──────────────────────────────────────────────────────────────
+  async function loadRepo() {
+    const path = document.getElementById("repo-input").value.trim();
+    if (!path) return;
+
+    setStatus("loading", "SCANNING...");
+    document.getElementById("scan-btn").disabled = true;
+
+    try {
+      // load file tree
+      const loadRes = await fetch("/api/load", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_path: path })
+      });
+      const loadData = await loadRes.json();
+      if (loadData.error) { showError(loadData.error); return; }
+
+      currentRepoPath = path;
+      allFiles = loadData.files;
+
+      document.getElementById("stat-files").querySelector(".stat-val").textContent = loadData.file_count;
+
+      // run hotspot analysis
+      const analyseRes = await fetch("/api/analyse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_path: path })
+      });
+      const analyseData = await analyseRes.json();
+      if (analyseData.error) { showError(analyseData.error); return; }
+
+      // load repo stats
+      const statsRes = await fetch("/api/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_path: path })
+      });
+      const statsData = await statsRes.json();
+      if (!statsData.error) {
+        document.getElementById("stat-commits").querySelector(".stat-val").textContent = statsData.total_commits;
+        document.getElementById("stat-authors").querySelector(".stat-val").textContent = statsData.total_authors;
+        renderAuthors(statsData.top_authors);
+      }
+
+      renderHotspots(analyseData.hotspots);
+      renderFileList(allFiles);
+      showPanels();
+      setStatus("ok", "READY");
+
+    } catch (err) {
+      showError("Could not reach server. Is Flask running?");
+    } finally {
+      document.getElementById("scan-btn").disabled = false;
+    }
+  }
+
+  // ── render hotspots ────────────────────────────────────────────────────────
+  function renderHotspots(hotspots) {
+    const list = document.getElementById("hotspot-list");
+    if (!hotspots || hotspots.length === 0) {
+      list.innerHTML = '<div class="empty-list">No hotspots found.</div>';
+      return;
+    }
+    const maxChanges = hotspots[0].changes;
+    list.innerHTML = hotspots.map((h, i) => {
+      const pct = Math.round((h.changes / maxChanges) * 100);
+      const riskClass = pct > 75 ? "risk-high" : pct > 40 ? "risk-med" : "risk-low";
+      const filename = h.file.split("/").pop();
+      const dir = h.file.includes("/") ? h.file.substring(0, h.file.lastIndexOf("/")) : "";
+      return `
+        <div class="file-item ${riskClass}" onclick="explainFile('${h.file.replace(/'/g, "\\'")}')">
+          <div class="file-item-top">
+            <div class="file-name-wrap">
+              <span class="file-rank">${String(i + 1).padStart(2, "0")}</span>
+              <div>
+                <span class="file-name">${filename}</span>
+                ${dir ? `<span class="file-dir">${dir}</span>` : ""}
+              </div>
+            </div>
+            <div class="file-stats-wrap">
+              <span class="file-changes">${h.changes}</span>
+              <span class="file-authors-count">${h.authors}A</span>
+            </div>
+          </div>
+          <div class="churn-bar-wrap">
+            <div class="churn-bar ${riskClass}" style="width:${pct}%"></div>
+          </div>
+          ${h.churn_rate ? `<div class="churn-rate">${h.churn_rate} changes/day</div>` : ""}
+        </div>`;
+    }).join("");
+  }
+
+  // ── render file list ───────────────────────────────────────────────────────
+  function renderFileList(files) {
+    renderFileListInner(files);
+  }
+
+  function renderFileListInner(files) {
+    const inner = document.getElementById("file-list-inner");
+    inner.innerHTML = files.map(f => {
+      const filename = f.split("/").pop();
+      const dir = f.includes("/") ? f.substring(0, f.lastIndexOf("/")) : "";
+      return `
+        <div class="file-item file-item-plain" onclick="explainFile('${f.replace(/'/g, "\\'")}')">
+          <span class="file-name">${filename}</span>
+          ${dir ? `<span class="file-dir">${dir}</span>` : ""}
+        </div>`;
+    }).join("");
+  }
+
+  function filterFiles() {
+    const q = document.getElementById("file-search").value.toLowerCase();
+    const filtered = allFiles.filter(f => f.toLowerCase().includes(q));
+    renderFileListInner(filtered);
+  }
+
+  // ── explain file ───────────────────────────────────────────────────────────
+  async function explainFile(filePath) {
+    // highlight selected
+    document.querySelectorAll(".file-item").forEach(el => el.classList.remove("selected"));
+    event.currentTarget.classList.add("selected");
+
+    setStatus("loading", "ANALYSING...");
+    showDetailLoading(filePath);
+
+    try {
+      const res = await fetch("/api/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_path: currentRepoPath, file_path: filePath })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        showDetailError(data.error);
+        setStatus("error", "ERROR");
+        return;
+      }
+
+      renderDetail(data);
+      setStatus("ok", "READY");
+
+    } catch (err) {
+      showDetailError("Request failed. Is the server running?");
+      setStatus("error", "ERROR");
+    }
+  }
+
+  // ── render detail ──────────────────────────────────────────────────────────
+  function renderDetail(data) {
+    document.getElementById("detail-empty").style.display = "none";
+    document.getElementById("detail-content").style.display = "block";
+
+    // header
+    const filename = data.file.split("/").pop();
+    document.getElementById("detail-path").innerHTML =
+      `<span class="path-dir">${data.file.replace(filename, "")}</span><span class="path-file">${filename}</span>`;
+    document.getElementById("detail-meta").innerHTML =
+      `<span class="meta-chip">${data.commit_count} commits</span>`;
+
+    // explanation
+    document.getElementById("loading-bar").style.display = "none";
+    const expEl = document.getElementById("explanation-text");
+    expEl.style.display = "block";
+    expEl.textContent = data.explanation;
+
+    // chart
+    renderChart(data.commits);
+
+    // commit log
+    renderCommitLog(data.commits);
+  }
+
+  function showDetailLoading(filePath) {
+    document.getElementById("detail-empty").style.display = "none";
+    document.getElementById("detail-content").style.display = "block";
+
+    const filename = filePath.split("/").pop();
+    document.getElementById("detail-path").innerHTML =
+      `<span class="path-file">${filename}</span>`;
+    document.getElementById("detail-meta").innerHTML = "";
+
+    document.getElementById("loading-bar").style.display = "flex";
+    document.getElementById("explanation-text").style.display = "none";
+    document.getElementById("commit-log").innerHTML = "";
+
+    if (commitChart) { commitChart.destroy(); commitChart = null; }
+    document.querySelector(".chart-wrap").innerHTML = '<canvas id="commit-chart"></canvas>';
+  }
+
+  function showDetailError(msg) {
+    document.getElementById("loading-bar").style.display = "none";
+    const expEl = document.getElementById("explanation-text");
+    expEl.style.display = "block";
+    expEl.textContent = "Error: " + msg;
+    expEl.style.color = "var(--danger)";
+  }
+
+  // ── commit chart ───────────────────────────────────────────────────────────
+  function renderChart(commits) {
+    if (!commits || commits.length === 0) return;
+
+    // bucket commits by month
+    const buckets = {};
+    commits.forEach(c => {
+      const month = c.date.substring(0, 7); // YYYY-MM
+      buckets[month] = (buckets[month] || 0) + 1;
+    });
+
+    const sorted = Object.keys(buckets).sort();
+    const labels = sorted.map(m => {
+      const [y, mo] = m.split("-");
+      return `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]} ${y.slice(2)}`;
+    });
+    const values = sorted.map(m => buckets[m]);
+
+    if (commitChart) commitChart.destroy();
+
+    const ctx = document.getElementById("commit-chart").getContext("2d");
+    commitChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: values.map(v => {
+            const max = Math.max(...values);
+            const intensity = v / max;
+            return intensity > 0.7 ? "rgba(0,255,136,0.8)" :
+                   intensity > 0.4 ? "rgba(0,255,136,0.45)" :
+                                     "rgba(0,255,136,0.2)";
+          }),
+          borderWidth: 0,
+          borderRadius: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: "#0d1117",
+          borderColor: "rgba(0,255,136,0.3)",
+          borderWidth: 1,
+          titleColor: "#00ff88",
+          bodyColor: "#8b9ab0",
+          callbacks: { title: items => items[0].label, label: item => `${item.raw} commits` }
+        }},
+        scales: {
+          x: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#4a5568", font: { family: "JetBrains Mono, monospace", size: 10 }, maxRotation: 45 }},
+          y: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#4a5568", font: { family: "JetBrains Mono, monospace", size: 10 } }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // ── commit log ─────────────────────────────────────────────────────────────
+  function renderCommitLog(commits) {
+    const log = document.getElementById("commit-log");
+    if (!commits || commits.length === 0) {
+      log.innerHTML = '<div class="empty-list">No commits found.</div>';
+      return;
+    }
+    log.innerHTML = commits.slice(0, 20).map(c => `
+      <div class="commit-row">
+        <span class="commit-hash">${c.hash}</span>
+        <span class="commit-date">${c.date.substring(0, 10)}</span>
+        <span class="commit-author">${c.author}</span>
+        <span class="commit-msg">${escapeHtml(c.message)}</span>
+      </div>`).join("");
+  }
+
+  // ── render authors ─────────────────────────────────────────────────────────
+  function renderAuthors(authors) {
+    const list = document.getElementById("authors-list");
+    list.innerHTML = authors.map(a => `
+      <div class="author-chip">
+        <div class="author-avatar">${a.name.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase()}</div>
+        <span class="author-name">${a.name}</span>
+        <span class="author-commits">${a.commits}</span>
+      </div>`).join("");
+    document.getElementById("bottom-bar").style.display = "flex";
+  }
+
+  // ── tab switching ──────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    const isHotspot = tab === "hotspots";
+    document.getElementById("hotspot-list").style.display = isHotspot ? "block" : "none";
+    document.getElementById("file-list").style.display = isHotspot ? "none" : "block";
+    document.getElementById("tab-hotspots").classList.toggle("active", isHotspot);
+    document.getElementById("tab-files").classList.toggle("active", !isHotspot);
+  }
+
+  // ── show panels ────────────────────────────────────────────────────────────
+  function showPanels() {
+    document.getElementById("empty-state").style.display = "none";
+    document.getElementById("panels").style.display = "flex";
+  }
+
+  function showError(msg) {
+    setStatus("error", "ERROR");
+    alert(msg);
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // enter key on input
+  document.getElementById("repo-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") loadRepo();
+  });
+</script>
+</body>
+</html>
