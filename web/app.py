@@ -12,8 +12,6 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)  # allows the frontend JS to call these endpoints without browser blocking
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
-
 def validate_repo(repo_path: str):
     """Returns (repo, error_string). error_string is None if repo is valid."""
     if not repo_path:
@@ -27,7 +25,8 @@ def validate_repo(repo_path: str):
         return None, f"Not a valid git repository: {repo_path}"
     except Exception as e:
         return None, f"Could not open repository: {str(e)}"
-    
+
+
 def is_safe_repo_file(repo_path: str, file_path: str) -> tuple:
     """
     Verifies that file_path resolves to a file inside repo_path (no path traversal).
@@ -36,7 +35,7 @@ def is_safe_repo_file(repo_path: str, file_path: str) -> tuple:
     repo_path = os.path.abspath(os.path.normpath(repo_path))
     full_path = os.path.abspath(os.path.join(repo_path, file_path))
     
-    # Check if resolved path is inside repo
+    # Make sure the file path doesn't escape the repo (no path traversal attacks)
     try:
         os.path.commonpath([repo_path, full_path])
     except ValueError:
@@ -53,6 +52,7 @@ def is_safe_repo_file(repo_path: str, file_path: str) -> tuple:
 
 def get_file_tree(repo_path: str) -> list:
     """Returns a flat list of all tracked text files in the repo."""
+    # File extensions to skip (binary files and generated code)
     BINARY_EXTENSIONS = {
         ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pdf", ".pyc",
         ".db", ".sqlite", ".zip", ".tar", ".exe", ".whl", ".so",
@@ -60,7 +60,7 @@ def get_file_tree(repo_path: str) -> list:
     }
     files = []
     for root, dirs, filenames in os.walk(repo_path):
-        # skip hidden folders like .git, .venv, node_modules
+        # Skip hidden and build directories to avoid noise
         dirs[:] = [
             d for d in dirs
             if not d.startswith(".")
@@ -75,8 +75,6 @@ def get_file_tree(repo_path: str) -> list:
     return sorted(files)
 
 
-# ── routes ───────────────────────────────────────────────────────────────────
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -84,6 +82,7 @@ def index():
 
 @app.route("/api/load", methods=["POST"])
 def load_repo():
+    # Load a repository and return its file tree for the frontend
     """
     Load a repo and return its file tree.
     Body: { "repo_path": "C:/path/to/repo" }
@@ -113,6 +112,7 @@ def load_repo():
 
 @app.route("/api/analyse", methods=["POST"])
 def analyse():
+    # Analyze the entire repository to find hotspots (most changed files)
     """
     Run hotspot analysis on the whole repo.
     Body: { "repo_path": "C:/path/to/repo" }
@@ -136,6 +136,7 @@ def analyse():
 
 @app.route("/api/explain", methods=["POST"])
 def explain():
+    # Get detailed history and AI explanation for a specific file
     """
     Get git history + AI explanation for a specific file.
     Body: { "repo_path": "C:/path/to/repo", "file_path": "src/auth.py" }
@@ -155,7 +156,7 @@ def explain():
     if error:
         return jsonify({"error": error}), 400
 
-    # check the file safely (no path traversal)
+    # Verify the file exists and is inside the repo (security check)
     is_safe, full_path, safety_error = is_safe_repo_file(repo_path, file_path)
     if not is_safe:
         return jsonify({"error": safety_error}), 400
@@ -185,6 +186,7 @@ def explain():
 
 @app.route("/api/stats", methods=["POST"])
 def repo_stats():
+    # Get overall repository statistics for the dashboard
     """
     Returns high-level repo stats for the dashboard header.
     Body: { "repo_path": "C:/path/to/repo" }
@@ -203,10 +205,12 @@ def repo_stats():
         author_counts = Counter()
         total = 0
 
+        # Count commits by author across the repo history
         for commit in repo.iter_commits(max_count=500):
             author_counts[commit.author.name] += 1
             total += 1
 
+        # Get the top 5 contributors
         top_authors = [
             {"name": name, "commits": count}
             for name, count in author_counts.most_common(5)
@@ -221,8 +225,6 @@ def repo_stats():
     except Exception as e:
         return jsonify({"error": f"Failed to get repo stats: {str(e)}"}), 500
 
-
-# ── run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     app.run(debug=False, port=5000)

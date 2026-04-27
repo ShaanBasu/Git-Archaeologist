@@ -11,7 +11,7 @@
 
   <div class="scanline"></div>
 
-  <!-- TOP BAR -->
+  <!-- Top navigation bar showing app branding and repo stats -->
   <header class="topbar">
     <div class="topbar-left">
       <div class="logo-mark">
@@ -39,7 +39,7 @@
     </div>
   </header>
 
-  <!-- REPO INPUT BAR -->
+  <!-- Input field for entering the repository path to scan -->
   <div class="input-bar">
     <div class="input-prefix">REPO_PATH</div>
     <input
@@ -59,10 +59,10 @@
     </button>
   </div>
 
-  <!-- MAIN LAYOUT -->
+  <!-- Main content area with two-panel layout: file list on left, details on right -->
   <div class="workspace" id="workspace">
 
-    <!-- EMPTY STATE -->
+    <!-- Message shown before a repository is loaded -->
     <div class="empty-state" id="empty-state">
       <div class="empty-grid"></div>
       <div class="empty-content">
@@ -79,10 +79,10 @@
       </div>
     </div>
 
-    <!-- PANELS (hidden until repo loaded) -->
+    <!-- Two-panel interface: file list and detail view -->
     <div class="panels" id="panels" style="display:none">
 
-      <!-- LEFT: FILE TREE + HOTSPOTS -->
+      <!-- Left sidebar showing hotspots and all files -->
       <aside class="left-panel">
         <div class="panel-header">
           <span class="panel-title">HOTSPOT INDEX</span>
@@ -92,10 +92,10 @@
           </div>
         </div>
 
-        <!-- HOTSPOTS TAB -->
+        <!-- Tab to view most-changed files (hotspots) -->
         <div id="hotspot-list" class="file-list"></div>
 
-        <!-- ALL FILES TAB -->
+        <!-- Tab to browse all files in the repository -->
         <div id="file-list" class="file-list" style="display:none">
           <div class="search-wrap">
             <input type="text" id="file-search" class="file-search" placeholder="filter files..." oninput="filterFiles()" />
@@ -104,7 +104,7 @@
         </div>
       </aside>
 
-      <!-- RIGHT: DETAIL PANEL -->
+      <!-- Right panel showing detailed analysis for selected file -->
       <main class="right-panel" id="right-panel">
         <div class="detail-empty" id="detail-empty">
           <p>SELECT A FILE TO ANALYSE</p>
@@ -112,13 +112,13 @@
 
         <div class="detail-content" id="detail-content" style="display:none">
 
-          <!-- FILE HEADER -->
-          <div class="detail-header">
+        <!-- Header with file path and metadata -->
+        <div class="detail-header">
             <div class="detail-path" id="detail-path"></div>
             <div class="detail-meta" id="detail-meta"></div>
           </div>
 
-          <!-- AI EXPLANATION -->
+          <!-- AI-generated summary of what this file does -->
           <div class="section">
             <div class="section-label">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -136,7 +136,7 @@
             </div>
           </div>
 
-          <!-- COMMIT TIMELINE -->
+          <!-- Bar chart showing commit activity over time -->
           <div class="section">
             <div class="section-label">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -149,7 +149,7 @@
             </div>
           </div>
 
-          <!-- COMMIT LOG -->
+          <!-- List of recent commits touching this file -->
           <div class="section">
             <div class="section-label">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -168,18 +168,19 @@
     </div>
   </div>
 
-  <!-- TOP AUTHORS FOOTER -->
+  <!-- Footer showing top contributors across the repo -->
   <footer class="bottom-bar" id="bottom-bar" style="display:none">
     <span class="footer-label">TOP CONTRIBUTORS</span>
     <div class="authors-list" id="authors-list"></div>
   </footer>
 
 <script>
+  // Global state for the currently loaded repository and file listing
   let currentRepoPath = "";
   let allFiles = [];
   let commitChart = null;
 
-  // ── status helper ──────────────────────────────────────────────────────────
+  // Update status indicator in top bar
   function setStatus(state, text) {
     const dot = document.getElementById("status-dot");
     const label = document.getElementById("status-text");
@@ -187,7 +188,7 @@
     label.textContent = text;
   }
 
-  // ── load repo ──────────────────────────────────────────────────────────────
+  // Load repository and fetch file tree, hotspots, and statistics
   async function loadRepo() {
     const path = document.getElementById("repo-input").value.trim();
     if (!path) return;
@@ -196,7 +197,7 @@
     document.getElementById("scan-btn").disabled = true;
 
     try {
-      // load file tree
+      // Fetch file tree from backend
       const loadRes = await fetch("/api/load", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -210,7 +211,7 @@
 
       document.getElementById("stat-files").querySelector(".stat-val").textContent = loadData.file_count;
 
-      // run hotspot analysis
+      // Run hotspot analysis to find most-changed files
       const analyseRes = await fetch("/api/analyse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -219,7 +220,7 @@
       const analyseData = await analyseRes.json();
       if (analyseData.error) { showError(analyseData.error); return; }
 
-      // load repo stats
+      // Fetch overall repository statistics
       const statsRes = await fetch("/api/stats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +245,7 @@
     }
   }
 
-  // ── render hotspots ────────────────────────────────────────────────────────
+  // Render hotspot list with visual risk indicators
   function renderHotspots(hotspots) {
     const list = document.getElementById("hotspot-list");
     if (!hotspots || hotspots.length === 0) {
@@ -280,7 +281,7 @@
     }).join("");
   }
 
-  // ── render file list ───────────────────────────────────────────────────────
+  // Render initial file list and handle search/filter
   function renderFileList(files) {
     renderFileListInner(files);
   }
@@ -304,7 +305,7 @@
     renderFileListInner(filtered);
   }
 
-  // ── explain file ───────────────────────────────────────────────────────────
+  // Fetch and display analysis for a specific file
   async function explainFile(filePath) {
     // highlight selected
     document.querySelectorAll(".file-item").forEach(el => el.classList.remove("selected"));
@@ -314,6 +315,7 @@
     showDetailLoading(filePath);
 
     try {
+      // Request detailed analysis from backend
       const res = await fetch("/api/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -336,31 +338,32 @@
     }
   }
 
-  // ── render detail ──────────────────────────────────────────────────────────
+  // Display file details with explanation, chart, and commit log
   function renderDetail(data) {
     document.getElementById("detail-empty").style.display = "none";
     document.getElementById("detail-content").style.display = "block";
 
-    // header
+    // Set the file path in the header
     const filename = data.file.split("/").pop();
     document.getElementById("detail-path").innerHTML =
       `<span class="path-dir">${data.file.replace(filename, "")}</span><span class="path-file">${filename}</span>`;
     document.getElementById("detail-meta").innerHTML =
       `<span class="meta-chip">${data.commit_count} commits</span>`;
 
-    // explanation
+    // Show the explanation text
     document.getElementById("loading-bar").style.display = "none";
     const expEl = document.getElementById("explanation-text");
     expEl.style.display = "block";
     expEl.textContent = data.explanation;
 
-    // chart
+    // Build and display the commit frequency chart
     renderChart(data.commits);
 
-    // commit log
+    // Populate the commit history table
     renderCommitLog(data.commits);
   }
 
+  // Prepare detail panel for loading state
   function showDetailLoading(filePath) {
     document.getElementById("detail-empty").style.display = "none";
     document.getElementById("detail-content").style.display = "block";
@@ -386,11 +389,11 @@
     expEl.style.color = "var(--danger)";
   }
 
-  // ── commit chart ───────────────────────────────────────────────────────────
+  // Build bar chart showing commits grouped by month
   function renderChart(commits) {
     if (!commits || commits.length === 0) return;
 
-    // bucket commits by month
+    // Group commits by month for clearer visualization
     const buckets = {};
     commits.forEach(c => {
       const month = c.date.substring(0, 7); // YYYY-MM
@@ -443,7 +446,7 @@
     });
   }
 
-  // ── commit log ─────────────────────────────────────────────────────────────
+  // Display list of recent commits for the selected file
   function renderCommitLog(commits) {
     const log = document.getElementById("commit-log");
     if (!commits || commits.length === 0) {
@@ -459,7 +462,7 @@
       </div>`).join("");
   }
 
-  // ── render authors ─────────────────────────────────────────────────────────
+  // Populate footer with top contributors
   function renderAuthors(authors) {
     const list = document.getElementById("authors-list");
     list.innerHTML = authors.map(a => `
@@ -471,7 +474,7 @@
     document.getElementById("bottom-bar").style.display = "flex";
   }
 
-  // ── tab switching ──────────────────────────────────────────────────────────
+  // Switch between hotspots and all files tabs
   function switchTab(tab) {
     const isHotspot = tab === "hotspots";
     document.getElementById("hotspot-list").style.display = isHotspot ? "block" : "none";
@@ -480,12 +483,13 @@
     document.getElementById("tab-files").classList.toggle("active", !isHotspot);
   }
 
-  // ── show panels ────────────────────────────────────────────────────────────
+  // Show the main panel layout after repo is loaded
   function showPanels() {
     document.getElementById("empty-state").style.display = "none";
     document.getElementById("panels").style.display = "flex";
   }
 
+  // Display error message to user
   function showError(msg) {
     setStatus("error", "ERROR");
     alert(msg);
@@ -495,7 +499,7 @@
     return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
-  // enter key on input
+  // Allow pressing Enter to scan repository
   document.getElementById("repo-input").addEventListener("keydown", e => {
     if (e.key === "Enter") loadRepo();
   });

@@ -1,3 +1,8 @@
+"""
+This script provides all the necessary information to ollama and asks it to analyse it using a prompt. 
+Note: You can change the prompt to make it give more summarised or detailed information according to your needs
+"""
+
 import requests
 
 DEFAULT_MODEL = "llama3.2"

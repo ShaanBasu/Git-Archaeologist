@@ -1,3 +1,6 @@
+""" 
+This Script extracts the file history of the files in the repo and returns that information.
+"""
 import git
 
 

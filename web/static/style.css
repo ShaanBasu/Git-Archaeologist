@@ -1,7 +1,7 @@
-/* ── fonts ─────────────────────────────────────────────────────────────────── */
+/* Import Google Fonts for typography */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;500;700;800&display=swap');
 
-/* ── variables ─────────────────────────────────────────────────────────────── */
+/* CSS custom properties defining colors, fonts, and spacing */
 :root {
   --bg-base:        #080c10;
   --bg-panel:       #0c1117;
@@ -31,7 +31,7 @@
   --font-display: 'Syne', sans-serif;
 }
 
-/* ── reset ─────────────────────────────────────────────────────────────────── */
+/* Reset default browser styles and box sizing */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 
@@ -44,7 +44,7 @@ body {
   flex-direction: column;
 }
 
-/* ── scanline overlay ───────────────────────────────────────────────────────── */
+/* Subtle scan line effect overlay for visual depth */
 .scanline {
   position: fixed;
   inset: 0;
@@ -59,7 +59,7 @@ body {
   z-index: 999;
 }
 
-/* ── topbar ─────────────────────────────────────────────────────────────────── */
+/* Header bar with logo, stats, and status indicators */
 .topbar {
   display: flex;
   align-items: center;
@@ -171,7 +171,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ── input bar ──────────────────────────────────────────────────────────────── */
+/* Repository path input bar and scan button */
 .input-bar {
   display: flex;
   align-items: center;
@@ -234,14 +234,14 @@ body {
 .scan-btn:active { transform: scale(0.98); }
 .scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ── workspace ──────────────────────────────────────────────────────────────── */
+/* Main workspace container */
 .workspace {
   flex: 1;
   overflow: hidden;
   position: relative;
 }
 
-/* ── empty state ────────────────────────────────────────────────────────────── */
+/* Initial state shown before repository is loaded */
 .empty-state {
   position: absolute;
   inset: 0;
@@ -291,13 +291,13 @@ body {
   color: var(--text-muted);
 }
 
-/* ── panels ─────────────────────────────────────────────────────────────────── */
+/* Main content panels layout */
 .panels {
   display: flex;
   height: 100%;
 }
 
-/* ── left panel ─────────────────────────────────────────────────────────────── */
+/* Left sidebar showing file list and hotspots */
 .left-panel {
   width: 300px;
   flex-shrink: 0;
@@ -378,7 +378,7 @@ body {
 
 .file-search:focus { border-color: var(--accent-border); }
 
-/* ── file items ─────────────────────────────────────────────────────────────── */
+/* Individual file list items with metadata */
 .file-item {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
@@ -491,7 +491,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ── right panel ────────────────────────────────────────────────────────────── */
+/* Right panel showing detailed analysis of selected file */
 .right-panel {
   flex: 1;
   overflow-y: auto;
@@ -514,7 +514,7 @@ body {
   padding: 24px 28px;
 }
 
-/* ── detail header ──────────────────────────────────────────────────────────── */
+/* File detail section header and metadata chips */
 .detail-header {
   display: flex;
   align-items: flex-start;
@@ -544,7 +544,7 @@ body {
   letter-spacing: 0.06em;
 }
 
-/* ── sections ───────────────────────────────────────────────────────────────── */
+/* Sections for analysis, chart, and commit log */
 .section {
   margin-bottom: 28px;
 }
@@ -560,7 +560,7 @@ body {
   font-weight: 500;
 }
 
-/* ── explanation ────────────────────────────────────────────────────────────── */
+/* AI-generated file explanation box with loading state */
 .explanation-box {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -611,7 +611,7 @@ body {
   color: var(--text-secondary);
 }
 
-/* ── chart ──────────────────────────────────────────────────────────────────── */
+/* Bar chart showing commit frequency over time */
 .chart-wrap {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -625,7 +625,7 @@ body {
   height: 100% !important;
 }
 
-/* ── commit log ─────────────────────────────────────────────────────────────── */
+/* Table displaying commit history for the selected file */
 .commit-log {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -658,7 +658,7 @@ body {
 .commit-author { color: var(--text-secondary); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
 .commit-msg    { color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── bottom bar ─────────────────────────────────────────────────────────────── */
+/* Footer showing top contributors */
 .bottom-bar {
   display: flex;
   align-items: center;
@@ -705,7 +705,7 @@ body {
 .author-name    { font-size: 11px; color: var(--text-secondary); }
 .author-commits { font-size: 10px; color: var(--text-muted); }
 
-/* ── scrollbar ──────────────────────────────────────────────────────────────── */
+/* Scrollbar styling for webkit browsers */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
